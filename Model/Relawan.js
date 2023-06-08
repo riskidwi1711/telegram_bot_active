@@ -68,7 +68,7 @@ class TimModel {
       [slug],
       (err, result) => {
         if (err) return callback(err);
-        callback(null, result[0]);
+        callback(null, result);
       }
     );
   }
@@ -79,7 +79,7 @@ class TimModel {
       [slug],
       (err, result) => {
         if (err) return callback(err);
-        callback(null, result[0]);
+        callback(null, result);
       }
     );
   }

@@ -1,8 +1,10 @@
 const { default: axios } = require("axios");
 const FormData = require("form-data");
+const { base_url } = require("../Config/api");
 const bot = require("../Config/bot");
 const ButtonBot = require("../Config/Button");
 const connection = require("../Config/database");
+const sendNotification = require("../Config/notify");
 const TimModel = require("../Model/Relawan");
 
 class InputTim {
@@ -51,7 +53,7 @@ class InputTim {
       formDatas.append("url", link);
       try {
         axios
-          .post("http://127.0.0.1:8000/api/uploadfromtelegram", formDatas)
+          .post(base_url + "/uploadfromtelegram", formDatas)
           .then((res) => {
             return callback(null, res);
           })
@@ -181,76 +183,93 @@ class InputTim {
         this.timModel.getKecamatanBySlug(this.msg.text, (err, res) => {
           if (err) {
           } else {
-            this.state.saveInput("kecamatan", {
-              id: res.id,
-              nama: res.nama,
-              slug: res.slug,
-            });
+            if (res.length > 0) {
+              this.state.saveInput("kecamatan", {
+                id: res[0].id,
+                nama: res[0].nama,
+                slug: res[0].slug,
+              });
 
-            this.timModel.getKelurahan(res.id, (errr, ress) => {
-              if (errr) {
-              } else {
-                let keyb = [];
-                ress.map((e) => {
-                  keyb.push({ text: e.slug });
-                });
-                bot.sendMessage(this.chatId, "Pilih kelurahan", {
-                  reply_markup: this.ButtonBot.createKeybMarkup(keyb, 2),
-                });
-              }
-            });
+              this.timModel.getKelurahan(res[0].id, (errr, ress) => {
+                if (errr) {
+                } else {
+                  let keyb = [];
+                  ress.map((e) => {
+                    keyb.push({ text: e.slug });
+                  });
+                  bot
+                    .sendMessage(this.chatId, "Pilih kelurahan", {
+                      reply_markup: this.ButtonBot.createKeybMarkup(keyb, 2),
+                    })
+                    .then((p) => this.state.goToNext());
+                }
+              });
+            } else {
+              bot.sendMessage(
+                this.chatId,
+                "❗Silahkan pilih kecamatan yang tersedia"
+              );
+            }
           }
         });
-
-        this.state.goToNext();
         break;
       case 8:
         this.timModel.getKelurahanBySlug(this.msg.text, (err, res) => {
           if (err) {
           } else {
-            this.state.saveInput("kelurahan", {
-              id: res.id,
-              nama: res.nama,
-              slug: res.slug,
-            });
-          }
-        });
-        this.timModel.getKategori((err, res) => {
-          if (err) {
-          } else {
-            bot.sendMessage(
-              this.chatId,
-              "Silahkan Masukan Kategori" +
-                res.map((e) => `\n${e.id}. ${e.nama_tim}`).join("") +
-                "\n\nKategori dapat lebih dari satu, contoh memilih kategori korsak dan korte maka balas 1,4"
-            );
+            if (res.length > 0) {
+              this.state.saveInput("kelurahan", {
+                id: res[0].id,
+                nama: res[0].nama,
+                slug: res[0].slug,
+              });
+
+              this.timModel.getKategori((err, res) => {
+                if (err) {
+                } else {
+                  bot.sendMessage(
+                    this.chatId,
+                    "Silahkan Masukan Kategori" +
+                      res.map((e) => `\n${e.id}. ${e.nama_tim}`).join("") +
+                      "\n\nKategori dapat lebih dari satu, contoh memilih kategori korsak dan korte maka balas 1,4"
+                  );
+                }
+              });
+
+              this.state.goToNext();
+            } else {
+              bot.sendMessage(
+                this.chatId,
+                "❗Silahkan pilih kelurahan yang tersedia"
+              );
+            }
           }
         });
 
-        this.state.goToNext();
         break;
+      // case 9:
+      //   this.state.saveInput("kategori", this.msg.text);
+      //   bot.sendMessage(this.chatId, "Pilih refrensi", {
+      //     reply_markup: {
+      //       keyboard: [
+      //         [
+      //           {
+      //             text: "Suhud Alynudin",
+      //           },
+      //           {
+      //             text: "Ketua DPD",
+      //           },
+      //         ],
+      //       ],
+      //       one_time_keyboard: true,
+      //       resize_keyboard: true,
+      //     },
+      //   });
+      //   this.state.goToNext();
+      //   break;
       case 9:
+        // this.state.saveInput("refrensi", this.msg.text);
         this.state.saveInput("kategori", this.msg.text);
-        bot.sendMessage(this.chatId, "Pilih refrensi", {
-          reply_markup: {
-            keyboard: [
-              [
-                {
-                  text: "Suhud Alynudin",
-                },
-                {
-                  text: "Ketua DPD",
-                },
-              ],
-            ],
-            one_time_keyboard: true,
-            resize_keyboard: true,
-          },
-        });
-        this.state.goToNext();
-        break;
-      case 10:
-        this.state.saveInput("refrensi", this.msg.text);
         let photo = this.state.getTimData().photo;
         bot
           .sendMessage(
@@ -269,9 +288,7 @@ class InputTim {
               this.state.getTimData().kelurahan_id.nama
             }\n\nKategori : \n➡️ ${
               this.state.getTimData().tim
-            }\n\nReferensi : \n➡️ ${
-              this.state.getTimData().refrensi
-            }
+            }\n\nReferensi : \n➡️ ${this.state.getTimData().refrensi}
           `
           )
           .then(
@@ -311,7 +328,7 @@ class InputTim {
           );
         this.state.goToNext();
         break;
-      case 11:
+      case 10:
         if (
           this.msg.text === "Benar" ||
           this.msg.text === "Ulangi menyimpan data"
@@ -371,7 +388,7 @@ class InputTim {
                         inp.rw,
                         inp.user_created,
                         fileName,
-                        inp.refrensi
+                        "suhud alynudin",
                       ],
                       (err, result) => {
                         if (err) console.log(err);
@@ -381,10 +398,17 @@ class InputTim {
                             message_id: sentMessage.message_id,
                           })
                           .then((s) => {
-                            bot.sendMessage(
-                              this.chatId,
-                              "Terimkasih telah menginputkan data",
-                              this.opts
+                            sendNotification(
+                              "Notifikasi Telegram",
+                              `${this.username} telah menginputkan data tim dengan nama ${inp.nama}`,
+                              "input_tim",
+                              () => {
+                                bot.sendMessage(
+                                  this.chatId,
+                                  "Terimkasih telah menginputkan data",
+                                  this.opts
+                                );
+                              }
                             );
                           });
                       }

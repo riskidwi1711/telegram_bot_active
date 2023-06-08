@@ -1,5 +1,6 @@
 const bot = require("../Config/bot");
 const ButtonBot = require("../Config/Button");
+const sendNotification = require("../Config/notify");
 const SurveyModel = require("../Model/Survey");
 
 class SurveyCommand {
@@ -56,31 +57,35 @@ class SurveyCommand {
                     (gagal, hasi) => {
                       if (gagal) {
                       } else {
-                        if (hasi.length > 0) {
-                          bot.sendMessage(this.chatId, 'Sudah mengisi survey, silahkan pilih perintah yang tersedia', {
-                            reply_markup: {
-                              keyboard: [
-                                [
-                                  {
-                                    text: "/start",
-                                  },
-                                  {
-                                    text: "/survey",
-                                  },
+                        if (false) {
+                          bot.sendMessage(
+                            this.chatId,
+                            "Sudah mengisi survey, silahkan pilih perintah yang tersedia",
+                            {
+                              reply_markup: {
+                                keyboard: [
+                                  [
+                                    {
+                                      text: "/start",
+                                    },
+                                    {
+                                      text: "/survey",
+                                    },
+                                  ],
+                                  [
+                                    {
+                                      text: "/input_tim",
+                                    },
+                                    {
+                                      text: "/tabulasi",
+                                    },
+                                  ],
                                 ],
-                                [
-                                  {
-                                    text: "/input_tim",
-                                  },
-                                  {
-                                    text: "/tabulasi",
-                                  },
-                                ],
-                              ],
-                              one_time_keyboard: true,
-                              resize_keyboard: true,
-                            },
-                          });
+                                one_time_keyboard: true,
+                                resize_keyboard: true,
+                              },
+                            }
+                          );
                         } else {
                           this.state.goToStep(1);
                           this.conversation();
@@ -110,9 +115,9 @@ class SurveyCommand {
           } else {
             bot.sendMessage(
               this.chatId,
-              `Silahkan pilih salah satu survey yang tersedia dibawah ini \n\n${result.map(
-                (e) => `/${e.slug}`
-              ).join('\n')}`,
+              `Silahkan pilih salah satu survey yang tersedia dibawah ini \n\n${result
+                .map((e) => `/${e.slug}`)
+                .join("\n")}`,
               {
                 reply_markup: { remove_keyboard: true },
               }
@@ -233,15 +238,22 @@ class SurveyCommand {
                       },
                     });
                   } else {
-                    bot
-                      .editMessageText("✅ Data berhasil disimpan", {
-                        chat_id: this.chatId,
-                        message_id: sentMessage.message_id,
-                      })
-                      .then((edited) => {
-                        this.state.goToStep(4);
-                        this.conversation();
-                      });
+                    sendNotification(
+                      "Notifikasi Telegram",
+                      `${this.username} telah berhasil mengisi survey`,
+                      "survey",
+                      () => {
+                        bot
+                          .editMessageText("✅ Data berhasil disimpan", {
+                            chat_id: this.chatId,
+                            message_id: sentMessage.message_id,
+                          })
+                          .then((edited) => {
+                            this.state.goToStep(4);
+                            this.conversation();
+                          });
+                      }
+                    );
                   }
                 }
               );
